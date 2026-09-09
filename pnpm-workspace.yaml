@@ -1,0 +1,3 @@
+allowBuilds:
+  msedge-tts: true
+  unrs-resolver: true
