@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
   Mic,
   Sliders,
@@ -8,8 +8,11 @@ import {
   Move,
   Loader2,
   Sparkles,
+  Music,
+  Upload,
+  Volume2,
 } from "lucide-react";
-import { VOICES, SUBTITLE_COLORS, SubtitleColor } from "@/types/video";
+import { VOICES, SUBTITLE_COLORS, SubtitleColor, BgmTrack } from "@/types/video";
 
 interface ScriptSubtitleControlsProps {
   scriptText: string;
@@ -18,6 +21,14 @@ interface ScriptSubtitleControlsProps {
   onVoiceChange: (voice: string) => void;
   speechRate: number;
   onSpeechRateChange: (rate: number) => void;
+
+  // BGM
+  bgmTracks: BgmTrack[];
+  selectedBgmId: string;
+  onBgmChange: (bgmId: string) => void;
+  bgmVolume: number;
+  onBgmVolumeChange: (vol: number) => void;
+  onUploadCustomBgm: (e: React.ChangeEvent<HTMLInputElement>) => void;
 
   enableSubtitles: boolean;
   onEnableSubtitlesChange: (enabled: boolean) => void;
@@ -50,6 +61,12 @@ export const ScriptSubtitleControls = React.memo(function ScriptSubtitleControls
   onVoiceChange,
   speechRate,
   onSpeechRateChange,
+  bgmTracks,
+  selectedBgmId,
+  onBgmChange,
+  bgmVolume,
+  onBgmVolumeChange,
+  onUploadCustomBgm,
   enableSubtitles,
   onEnableSubtitlesChange,
   subtitleColor,
@@ -71,6 +88,7 @@ export const ScriptSubtitleControls = React.memo(function ScriptSubtitleControls
   isGeneratingTTS,
   onGenerateTTS,
 }: ScriptSubtitleControlsProps) {
+  const bgmFileInputRef = useRef<HTMLInputElement | null>(null);
   const wordCount = scriptText.trim().split(/\s+/).filter(Boolean).length;
   const estimatedSeconds = Math.round(wordCount / 3);
 
@@ -138,6 +156,86 @@ export const ScriptSubtitleControls = React.memo(function ScriptSubtitleControls
             onChange={(e) => onSpeechRateChange(Number(e.target.value))}
             className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
           />
+        </div>
+      </div>
+
+      {/* Nhạc nền (BGM) & Âm lượng */}
+      <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Music className="w-4 h-4 text-emerald-400" />
+            <div>
+              <span className="text-xs font-semibold text-slate-200">
+                Nhạc Nền Video (Background Music)
+              </span>
+              <p className="text-[10px] text-slate-400">
+                Tự động lặp lại theo video và hòa âm cùng giọng đọc
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              ref={bgmFileInputRef}
+              onChange={onUploadCustomBgm}
+              accept="audio/*"
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => bgmFileInputRef.current?.click()}
+              className="text-[11px] font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded-lg border border-slate-700 transition flex items-center gap-1"
+            >
+              <Upload className="w-3 h-3 text-emerald-400" />
+              Tải nhạc riêng
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          <div>
+            <label className="text-[11px] font-medium text-slate-400 mb-1.5 block">
+              Chọn bài nhạc:
+            </label>
+            <select
+              value={selectedBgmId}
+              onChange={(e) => onBgmChange(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-medium"
+            >
+              {bgmTracks.map((track) => (
+                <option key={track.id} value={track.id}>
+                  {track.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-400 flex items-center gap-1 text-[11px]">
+                <Volume2 className="w-3 h-3 text-emerald-400" />
+                Âm lượng nhạc nền:
+              </span>
+              <span className="text-emerald-400 font-mono font-medium">
+                {selectedBgmId === "none" ? "Tắt" : `${Math.round(bgmVolume * 100)}%`}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={selectedBgmId === "none" ? 0 : bgmVolume}
+              disabled={selectedBgmId === "none"}
+              onChange={(e) => onBgmVolumeChange(Number(e.target.value))}
+              className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500 disabled:opacity-30 disabled:cursor-not-allowed"
+            />
+            <div className="flex justify-between text-[10px] text-slate-500">
+              <span>Êm dịu (10-20%)</span>
+              <span>Vừa phải (30-50%)</span>
+            </div>
+          </div>
         </div>
       </div>
 

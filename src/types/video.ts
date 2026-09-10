@@ -39,3 +39,22 @@ export const SUBTITLE_COLORS: SubtitleColor[] = [
   { id: "cyan", name: "Xanh Cyan", hex: "#22D3EE", border: "#000000" },
   { id: "green", name: "Xanh Neon", hex: "#4ADE80", border: "#000000" },
 ];
+
+export interface BgmTrack {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export const DEFAULT_BGM_TRACKS: BgmTrack[] = [
+  {
+    id: "none",
+    name: "Không dùng nhạc nền",
+    url: "",
+  },
+  {
+    id: "nhac-nen-mau",
+    name: "Nhạc nền mẫu (Chuẩn)",
+    url: "/bgm/nhac-nen.mp3",
+  },
+];

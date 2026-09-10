@@ -10,6 +10,7 @@ import {
   Type,
   Download,
   Loader2,
+  Music,
 } from "lucide-react";
 import {
   VideoTemplate,
@@ -53,6 +54,12 @@ interface VideoPreviewPlayerProps {
   onAudioTimeUpdate: () => void;
   onAudioEnded: () => void;
 
+  // BGM
+  selectedBgmUrl: string;
+  selectedBgmName: string;
+  bgmVolume: number;
+  bgmAudioRef: RefObject<HTMLAudioElement | null>;
+
   // Export state
   hasAudioBlob: boolean;
   isExporting: boolean;
@@ -91,6 +98,10 @@ export const VideoPreviewPlayer = React.memo(function VideoPreviewPlayer({
   onTogglePlay,
   onAudioTimeUpdate,
   onAudioEnded,
+  selectedBgmUrl,
+  selectedBgmName,
+  bgmVolume,
+  bgmAudioRef,
   hasAudioBlob,
   isExporting,
   exportProgress,
@@ -248,6 +259,16 @@ export const VideoPreviewPlayer = React.memo(function VideoPreviewPlayer({
           />
         )}
 
+        {/* BGM Audio (Loop) */}
+        {selectedBgmUrl && (
+          <audio
+            ref={bgmAudioRef}
+            src={selectedBgmUrl}
+            loop
+            preload="auto"
+          />
+        )}
+
         {/* Nút Play to đè giữa khung hình */}
         <div
           onClick={onTogglePlay}
@@ -318,6 +339,15 @@ export const VideoPreviewPlayer = React.memo(function VideoPreviewPlayer({
             {enableSubtitles
               ? `${rawWords.length} từ đã đồng bộ nhịp`
               : "Đang tắt"}
+          </span>
+        </div>
+        <div className="flex justify-between text-slate-400">
+          <span className="flex items-center gap-1.5">
+            <Music className="w-3.5 h-3.5 text-indigo-400" />
+            Nhạc nền:
+          </span>
+          <span className="text-slate-200 font-medium truncate max-w-[150px] text-right" title={selectedBgmName}>
+            {selectedBgmUrl ? `${selectedBgmName} (${Math.round(bgmVolume * 100)}%)` : "Không dùng"}
           </span>
         </div>
       </div>
