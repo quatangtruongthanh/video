@@ -47,7 +47,7 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
 
   // State: Background Music (BGM)
   const [bgmTracks, setBgmTracks] = useState<BgmTrack[]>(DEFAULT_BGM_TRACKS);
-  const [selectedBgmId, setSelectedBgmId] = useState<string>("piano");
+  const [selectedBgmId, setSelectedBgmId] = useState<string>("nhac-nen-mau");
   const [bgmVolume, setBgmVolume] = useState<number>(0.2); // 20% âm lượng để không lấn át giọng đọc
 
   // State: Subtitle Options

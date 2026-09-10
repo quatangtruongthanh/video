@@ -53,18 +53,8 @@ export const DEFAULT_BGM_TRACKS: BgmTrack[] = [
     url: "",
   },
   {
-    id: "piano",
-    name: "Nhẹ nhàng - Piano Acoustic",
-    url: "/bgm/nhe-nhang-piano.mp3",
-  },
-  {
-    id: "lofi",
-    name: "Chill Lofi - Thư giãn",
-    url: "/bgm/chill-lofi.mp3",
-  },
-  {
-    id: "warm",
-    name: "Truyền cảm - Sâu lắng",
-    url: "/bgm/truyen-cam-sau-lang.mp3",
+    id: "nhac-nen-mau",
+    name: "Nhạc nền mẫu (Chuẩn)",
+    url: "/bgm/nhac-nen.mp3",
   },
 ];
