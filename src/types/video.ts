@@ -39,3 +39,32 @@ export const SUBTITLE_COLORS: SubtitleColor[] = [
   { id: "cyan", name: "Xanh Cyan", hex: "#22D3EE", border: "#000000" },
   { id: "green", name: "Xanh Neon", hex: "#4ADE80", border: "#000000" },
 ];
+
+export interface BgmTrack {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export const DEFAULT_BGM_TRACKS: BgmTrack[] = [
+  {
+    id: "none",
+    name: "Không dùng nhạc nền",
+    url: "",
+  },
+  {
+    id: "piano",
+    name: "Nhẹ nhàng - Piano Acoustic",
+    url: "/bgm/nhe-nhang-piano.mp3",
+  },
+  {
+    id: "lofi",
+    name: "Chill Lofi - Thư giãn",
+    url: "/bgm/chill-lofi.mp3",
+  },
+  {
+    id: "warm",
+    name: "Truyền cảm - Sâu lắng",
+    url: "/bgm/truyen-cam-sau-lang.mp3",
+  },
+];

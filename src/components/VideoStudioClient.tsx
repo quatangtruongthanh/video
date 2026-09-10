@@ -12,6 +12,8 @@ import {
   VOICES,
   SUBTITLE_COLORS,
   SubtitleColor,
+  BgmTrack,
+  DEFAULT_BGM_TRACKS,
 } from "@/types/video";
 
 import { Header } from "@/components/Header";
@@ -42,6 +44,11 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
   );
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0].id);
   const [speechRate, setSpeechRate] = useState(0);
+
+  // State: Background Music (BGM)
+  const [bgmTracks, setBgmTracks] = useState<BgmTrack[]>(DEFAULT_BGM_TRACKS);
+  const [selectedBgmId, setSelectedBgmId] = useState<string>("piano");
+  const [bgmVolume, setBgmVolume] = useState<number>(0.2); // 20% âm lượng để không lấn át giọng đọc
 
   // State: Subtitle Options
   const [enableSubtitles, setEnableSubtitles] = useState(true);
@@ -80,7 +87,20 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
   // Refs
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const bgmAudioRef = useRef<HTMLAudioElement | null>(null);
   const ffmpegRef = useRef<FFmpeg | null>(null);
+
+  // Lấy track nhạc nền đang chọn
+  const activeBgm = useMemo(() => {
+    return bgmTracks.find((b) => b.id === selectedBgmId) || null;
+  }, [bgmTracks, selectedBgmId]);
+
+  // Cập nhật âm lượng nhạc nền cho preview player
+  useEffect(() => {
+    if (bgmAudioRef.current) {
+      bgmAudioRef.current.volume = bgmVolume;
+    }
+  }, [bgmVolume]);
 
   // Fallback tải thêm templates client-side nếu SSR chưa có
   useEffect(() => {
@@ -220,7 +240,7 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
     }
   };
 
-  // Đồng bộ Play/Pause giữa Video Loop và Audio
+  // Đồng bộ Play/Pause giữa Video Loop, Giọng TTS và Nhạc Nền BGM
   const togglePlay = useCallback(async () => {
     if (!videoRef.current) return;
 
@@ -230,12 +250,18 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
       if (audioRef.current) {
         audioRef.current.pause();
       }
+      if (bgmAudioRef.current) {
+        bgmAudioRef.current.pause();
+      }
     } else {
       setIsPlaying(true);
       try {
         if (audioRef.current) {
           audioRef.current.currentTime = currentTime;
           await audioRef.current.play();
+        }
+        if (bgmAudioRef.current) {
+          await bgmAudioRef.current.play();
         }
         await videoRef.current.play();
       } catch {
@@ -253,7 +279,27 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
   const handleAudioEnded = useCallback(() => {
     setIsPlaying(false);
     if (videoRef.current) videoRef.current.pause();
+    if (bgmAudioRef.current) {
+      bgmAudioRef.current.pause();
+      bgmAudioRef.current.currentTime = 0;
+    }
     setCurrentTime(0);
+  }, []);
+
+  // Upload nhạc nền tùy chỉnh từ máy tính
+  const handleUploadCustomBgm = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    const customTrack: BgmTrack = {
+      id: `custom-bgm-${Date.now()}`,
+      name: `Tải lên: ${file.name.replace(/\.[^/.]+$/, "")}`,
+      url,
+    };
+
+    setBgmTracks((prev) => [customTrack, ...prev]);
+    setSelectedBgmId(customTrack.id);
   }, []);
 
   // Kéo thả Tiêu đề chính (Mouse & Touch drag)
@@ -431,13 +477,42 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
         renderAudio.onloadedmetadata = () => resolve();
       });
 
+      // Chuẩn bị nhạc nền BGM nếu người dùng chọn
+      let renderBgmAudio: HTMLAudioElement | null = null;
+      if (activeBgm && activeBgm.url) {
+        renderBgmAudio = new Audio();
+        renderBgmAudio.src = activeBgm.url;
+        renderBgmAudio.crossOrigin = "anonymous";
+        renderBgmAudio.loop = true;
+        await new Promise<void>((resolve) => {
+          if (!renderBgmAudio) return resolve();
+          renderBgmAudio.onloadedmetadata = () => resolve();
+          renderBgmAudio.onerror = () => resolve(); // Tiếp tục nếu không load được BGM
+        });
+      }
+
       const totalDuration = renderAudio.duration || audioDuration || 5;
 
       const canvasStream = canvas.captureStream(30);
       const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const audioSource = audioCtx.createMediaElementSource(renderAudio);
       const audioDestination = audioCtx.createMediaStreamDestination();
+
+      // Kết nối giọng đọc TTS (100% volume)
+      const audioSource = audioCtx.createMediaElementSource(renderAudio);
       audioSource.connect(audioDestination);
+
+      // Kết nối nhạc nền BGM với GainNode điều chỉnh âm lượng (bgmVolume)
+      if (renderBgmAudio) {
+        try {
+          const bgmSource = audioCtx.createMediaElementSource(renderBgmAudio);
+          const bgmGain = audioCtx.createGain();
+          bgmGain.gain.value = bgmVolume;
+          bgmSource.connect(bgmGain);
+          bgmGain.connect(audioDestination);
+        } catch (bgmErr) {
+          console.warn("Không thể nối BGM vào AudioContext:", bgmErr);
+        }
+      }
 
       audioDestination.stream.getAudioTracks().forEach((track) => {
         canvasStream.addTrack(track);
@@ -594,6 +669,11 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
       recorder.start(100);
       await renderVideo.play();
       await renderAudio.play();
+      if (renderBgmAudio) {
+        try {
+          await renderBgmAudio.play();
+        } catch {}
+      }
       renderLoop();
 
       await new Promise<void>((resolve) => {
@@ -604,6 +684,9 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
       isRecording = false;
       recorder.stop();
       renderVideo.pause();
+      if (renderBgmAudio) {
+        renderBgmAudio.pause();
+      }
 
       await new Promise<void>((resolve) => {
         recorder.onstop = () => resolve();
@@ -704,6 +787,12 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
               onVoiceChange={setSelectedVoice}
               speechRate={speechRate}
               onSpeechRateChange={setSpeechRate}
+              bgmTracks={bgmTracks}
+              selectedBgmId={selectedBgmId}
+              onBgmChange={setSelectedBgmId}
+              bgmVolume={bgmVolume}
+              onBgmVolumeChange={setBgmVolume}
+              onUploadCustomBgm={handleUploadCustomBgm}
               enableSubtitles={enableSubtitles}
               onEnableSubtitlesChange={setEnableSubtitles}
               subtitleColor={subtitleColor}
@@ -757,6 +846,10 @@ export function VideoStudioClient({ initialTemplates }: VideoStudioClientProps) 
               onTogglePlay={togglePlay}
               onAudioTimeUpdate={handleAudioTimeUpdate}
               onAudioEnded={handleAudioEnded}
+              selectedBgmUrl={activeBgm ? activeBgm.url : ""}
+              selectedBgmName={activeBgm ? activeBgm.name : "Không dùng"}
+              bgmVolume={bgmVolume}
+              bgmAudioRef={bgmAudioRef}
               hasAudioBlob={!!audioBlob}
               isExporting={isExporting}
               exportProgress={exportProgress}
